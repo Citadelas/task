@@ -15,6 +15,8 @@ type Storage struct {
 	db *pgxpool.Pool
 }
 
+const returning = "RETURNING id, title, description, priority, COALESCE(status, '') as status, created_at, due_date"
+
 func New(storagePath string) (*Storage, error) {
 	const op = "storage.postgresql.New"
 	db, err := pgxpool.New(context.Background(), storagePath)
@@ -29,7 +31,7 @@ func (s *Storage) CreateTask(ctx context.Context, title, description string,
 	const op = "storage.postgresql.CreateTask"
 	var task models.Task
 	err := pgxscan.Get(ctx, s.db, &task, "INSERT INTO tasks(title, description, priority) "+
-		"VALUES ($1, $2, $3) RETURNING id, title, description, priority, COALESCE(status, '') as status, created_at, due_date", title, description, priority)
+		"VALUES ($1, $2, $3)"+returning, title, description, priority)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -39,10 +41,13 @@ func (s *Storage) CreateTask(ctx context.Context, title, description string,
 func (s *Storage) GetTask(ctx context.Context, id uint64) (*models.Task, error) {
 	const op = "storage.postgresql.GetTask"
 	var task models.Task
-	err := pgxscan.Get(ctx, s.db, &task, "SELECT id, title, description, priority, COALESCE(status, '') as status, created_at, due_date FROM tasks WHERE id = $1", id)
+	err := pgxscan.Get(ctx, s.db, &task, ""+
+		"SELECT id, title, description, priority, "+
+		"COALESCE(status, '') as status, created_at, "+
+		"due_date FROM tasks WHERE id = $1", id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, storage.ErrTaskNotFound
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrTaskNotFound)
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -58,12 +63,12 @@ func (s *Storage) UpdateTask(ctx context.Context, id uint64, title, description,
             title = COALESCE(NULLIF($2, ''), title),
             description = COALESCE(NULLIF($3, ''), description),
             priority = COALESCE(NULLIF($4, ''), priority)
-        WHERE id = $1 RETURNING *
-    `
+        WHERE id = $1 
+    ` + returning
 	err := pgxscan.Get(ctx, s.db, &task, query, id, title, description, priority)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, storage.ErrTaskNotFound
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrTaskNotFound)
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -76,7 +81,7 @@ func (s *Storage) UpdateStatus(ctx context.Context, id uint64, status string) (*
 	err := pgxscan.Get(ctx, s.db, &task, "UPDATE tasks SET status = $1 WHERE id = $2 RETURNING *", status, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, storage.ErrTaskNotFound
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrTaskNotFound)
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -88,7 +93,7 @@ func (s *Storage) DeleteTask(ctx context.Context, id uint64) error {
 	commandTag, err := s.db.Exec(ctx, "DELETE FROM tasks WHERE id = $1", id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return storage.ErrTaskNotFound
+			return fmt.Errorf("%s: %w", op, storage.ErrTaskNotFound)
 		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
