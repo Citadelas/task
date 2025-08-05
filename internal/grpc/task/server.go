@@ -1,4 +1,4 @@
-package task
+package TaskService
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type Task interface {
+type TaskService interface {
 	CreateTask(ctx context.Context, title, description string,
 		priority string) (*models.Task, error)
 
@@ -24,12 +24,12 @@ type Task interface {
 }
 
 type serverAPI struct {
-	task    Task
+	task    TaskService
 	adapter *converter.TaskAdapter
 	taskv1.UnimplementedTaskServiceServer
 }
 
-func Register(gRPC *grpc.Server, task Task) {
+func Register(gRPC *grpc.Server, task TaskService) {
 	taskv1.RegisterTaskServiceServer(gRPC, &serverAPI{
 		task:    task,
 		adapter: converter.NewTaskAdapter(),
