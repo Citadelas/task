@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Citadelas/task/internal/domain/models"
 	"github.com/Citadelas/task/internal/lib/logger/sl"
+	"github.com/Citadelas/task/internal/storage"
 	"log/slog"
 )
 
@@ -80,6 +81,10 @@ func (t *Task) GetTask(ctx context.Context, id uint64) (*models.Task, error) {
 	)
 	res, err := t.getter.GetTask(ctx, id)
 	if err != nil {
+		if errors.Is(err, storage.ErrTaskNotFound) {
+			log.Warn("task not found", sl.Err(err))
+			return nil, fmt.Errorf("%s: %w", op, ErrWrongId)
+		}
 		log.Error("failed to get task", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -94,6 +99,10 @@ func (t *Task) UpdateTask(ctx context.Context, id uint64, title, description str
 	)
 	res, err := t.updater.UpdateTask(ctx, id, title, description, priority)
 	if err != nil {
+		if errors.Is(err, storage.ErrTaskNotFound) {
+			log.Warn("task not found", sl.Err(err))
+			return nil, fmt.Errorf("%s: %w", op, ErrWrongId)
+		}
 		log.Error("failed to update task", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -107,6 +116,10 @@ func (t *Task) UpdateStatus(ctx context.Context, id uint64, status string) (*mod
 	)
 	res, err := t.updater.UpdateStatus(ctx, id, status)
 	if err != nil {
+		if errors.Is(err, storage.ErrTaskNotFound) {
+			log.Warn("task not found", sl.Err(err))
+			return nil, fmt.Errorf("%s: %w", op, ErrWrongId)
+		}
 		log.Error("failed to update status", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -120,6 +133,10 @@ func (t *Task) DeleteTask(ctx context.Context, id uint64) error {
 	)
 	err := t.deleter.DeleteTask(ctx, id)
 	if err != nil {
+		if errors.Is(err, storage.ErrTaskNotFound) {
+			log.Warn("task not found", sl.Err(err))
+			return fmt.Errorf("%s: %w", op, ErrWrongId)
+		}
 		log.Error("failed to delete task", sl.Err(err))
 		return fmt.Errorf("%s: %w", op, err)
 	}

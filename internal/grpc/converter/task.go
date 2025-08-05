@@ -21,8 +21,13 @@ func NewTaskAdapter() *TaskAdapter {
 func (a *TaskAdapter) ToProto(domainTask *models.Task) (*taskv1.Task, error) {
 	statusVal, ok := taskv1.TaskStatus_value[domainTask.Status]
 	if !ok {
-		return nil, ErrUnknownStatus
+		if domainTask.Status != "" {
+			return nil, ErrUnknownStatus
+		}
+		statusVal = taskv1.TaskStatus_value["TASK_STATUS_UNSPECIFIED"]
 	}
+	status := taskv1.TaskStatus(statusVal)
+
 	priorityVal, ok := taskv1.TaskPriority_value[domainTask.Priority]
 	if !ok {
 		return nil, ErrUnknownPriority
@@ -32,7 +37,7 @@ func (a *TaskAdapter) ToProto(domainTask *models.Task) (*taskv1.Task, error) {
 		Title:       domainTask.Title,
 		Description: domainTask.Description,
 		Priority:    taskv1.TaskPriority(priorityVal),
-		Status:      taskv1.TaskStatus(statusVal),
+		Status:      status,
 		CreatedAt:   timestamppb.New(domainTask.CreatedAt),
 		DueDate:     timestamppb.New(domainTask.DueDate),
 	}, nil

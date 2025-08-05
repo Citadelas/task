@@ -15,7 +15,7 @@ type App struct {
 	port       int
 }
 
-func New(log *slog.Logger, taskService taskgrpc.TaskService, port int) *App {
+func New(log *slog.Logger, taskService taskgrpc.Task, port int) *App {
 	gRPCServer := grpc.NewServer()
 	taskgrpc.Register(gRPCServer, taskService)
 	reflection.Register(gRPCServer)

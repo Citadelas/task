@@ -4,6 +4,8 @@ github.com/Citadelas/protos v1.0.11 h1:OWLJOTbu7EyeBKqAm4VP1Zy43nupVkk3jEHcoJ/F9
 github.com/Citadelas/protos v1.0.11/go.mod h1:zGXGRXR7UxpkhHDhXC4ymbVZyY6M0vaIGBZYFUicnTA=
 github.com/Citadelas/protos v1.0.12 h1:UoQCztpRxiyTv5n/BKwhbHCaNgQuK4aKJfWYNHpK/Gc=
 github.com/Citadelas/protos v1.0.12/go.mod h1:zGXGRXR7UxpkhHDhXC4ymbVZyY6M0vaIGBZYFUicnTA=
+github.com/Citadelas/protos v1.0.13 h1:evGPaUGj+A4RyrGsHCrcY51+ZqcWD7zQlAfjTLJ6JpM=
+github.com/Citadelas/protos v1.0.13/go.mod h1:zGXGRXR7UxpkhHDhXC4ymbVZyY6M0vaIGBZYFUicnTA=
 github.com/cockroachdb/cockroach-go/v2 v2.2.0 h1:/5znzg5n373N/3ESjHF5SMLxiW4RKB05Ql//KWfeTFs=
 github.com/cockroachdb/cockroach-go/v2 v2.2.0/go.mod h1:u3MiKYGupPPjkn3ozknpMUpxPaNLTFWAya419/zv6eI=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=

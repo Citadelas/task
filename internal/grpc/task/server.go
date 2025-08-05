@@ -2,16 +2,18 @@ package TaskService
 
 import (
 	"context"
+	"errors"
 	taskv1 "github.com/Citadelas/protos/golang/task"
 	"github.com/Citadelas/task/internal/domain/models"
 	"github.com/Citadelas/task/internal/grpc/converter"
+	taskservice "github.com/Citadelas/task/internal/services/task"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type TaskService interface {
+type Task interface {
 	CreateTask(ctx context.Context, title, description string,
 		priority string) (*models.Task, error)
 
@@ -24,12 +26,12 @@ type TaskService interface {
 }
 
 type serverAPI struct {
-	task    TaskService
+	task    Task
 	adapter *converter.TaskAdapter
 	taskv1.UnimplementedTaskServiceServer
 }
 
-func Register(gRPC *grpc.Server, task TaskService) {
+func Register(gRPC *grpc.Server, task Task) {
 	taskv1.RegisterTaskServiceServer(gRPC, &serverAPI{
 		task:    task,
 		adapter: converter.NewTaskAdapter(),
@@ -76,7 +78,10 @@ func (s *serverAPI) GetTask(
 	task, err := s.task.GetTask(ctx, req.GetId())
 	//TODO: add various errors handlers
 	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
+		if errors.Is(err, taskservice.ErrWrongId) {
+			return nil, status.Error(codes.InvalidArgument, "task not found")
+		}
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	res, err := s.adapter.ToProto(task)
 	if err != nil {
@@ -92,6 +97,9 @@ func (s *serverAPI) UpdateTask(
 	}
 	task, err := s.task.UpdateTask(ctx, req.GetId(), req.GetTitle(), req.GetDescription(), req.GetPriority().String())
 	if err != nil {
+		if errors.Is(err, taskservice.ErrWrongId) {
+			return nil, status.Error(codes.InvalidArgument, "task not found")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	res, err := s.adapter.ToProto(task)
@@ -109,6 +117,9 @@ func (s *serverAPI) DeleteTask(
 	err := s.task.DeleteTask(ctx, req.GetId())
 	//TODO: add various errors handlers
 	if err != nil {
+		if errors.Is(err, taskservice.ErrWrongId) {
+			return nil, status.Error(codes.InvalidArgument, "task not found")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	return &emptypb.Empty{}, nil
@@ -126,6 +137,9 @@ func (s *serverAPI) UpdateStatus(
 	task, err := s.task.UpdateStatus(ctx, req.GetId(), req.GetStatus().String())
 	//TODO: add various errors handlers
 	if err != nil {
+		if errors.Is(err, taskservice.ErrWrongId) {
+			return nil, status.Error(codes.InvalidArgument, "task not found")
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	res, err := s.adapter.ToProto(task)
