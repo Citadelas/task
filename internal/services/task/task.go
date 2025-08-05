@@ -12,46 +12,45 @@ import (
 
 type Task struct {
 	logger  *slog.Logger
-	getter  Getter
-	creater Creater
-	updater Updater
-	deleter Deleter
+	getter  TaskGetter
+	creator TaskCreator
+	updater TaskUpdater
+	deleter TaskDeleter
 }
 
 var (
 	ErrWrongId = errors.New("wrong id")
 )
 
-type Creater interface {
+type TaskCreator interface {
 	CreateTask(ctx context.Context, title, description string,
 		priority string) (*models.Task, error)
 }
 
-type Getter interface {
+type TaskGetter interface {
 	GetTask(ctx context.Context, id uint64) (*models.Task, error)
 }
-
-type Updater interface {
+type TaskUpdater interface {
 	UpdateTask(ctx context.Context, id uint64, title, description string,
 		priority string) (*models.Task, error)
 	UpdateStatus(ctx context.Context, id uint64, status string) (*models.Task, error)
 }
 
-type Deleter interface {
+type TaskDeleter interface {
 	DeleteTask(ctx context.Context, id uint64) error
 }
 
 func New(
 	log *slog.Logger,
-	getter Getter,
-	creater Creater,
-	updater Updater,
-	deleter Deleter) *Task {
+	getter TaskGetter,
+	creator TaskCreator,
+	updater TaskUpdater,
+	deleter TaskDeleter) *Task {
 
 	return &Task{
 		logger:  log,
 		getter:  getter,
-		creater: creater,
+		creator: creator,
 		updater: updater,
 		deleter: deleter,
 	}
@@ -66,7 +65,7 @@ func (t *Task) CreateTask(ctx context.Context, title, description string,
 	log := t.logger.With(
 		slog.String("op", op),
 	)
-	res, err := t.creater.CreateTask(ctx, title, description, priority)
+	res, err := t.creator.CreateTask(ctx, title, description, priority)
 	if err != nil {
 		log.Error("Failed to create task", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", op, err)
