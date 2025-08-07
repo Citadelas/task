@@ -8,6 +8,7 @@ import (
 	"github.com/Citadelas/task/internal/storage"
 	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -33,6 +34,9 @@ func (s *Storage) CreateTask(ctx context.Context, title, description string,
 	err := pgxscan.Get(ctx, s.db, &task, "INSERT INTO tasks(title, description, priority) "+
 		"VALUES ($1, $2, $3)"+returning, title, description, priority)
 	if err != nil {
+		if lerr := checkTooLongField(op, err); lerr != nil {
+			return nil, lerr
+		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return &task, nil
@@ -70,6 +74,9 @@ func (s *Storage) UpdateTask(ctx context.Context, id uint64, title, description,
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("%s: %w", op, storage.ErrTaskNotFound)
 		}
+		if lerr := checkTooLongField(op, err); lerr != nil {
+			return nil, lerr
+		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	return &task, nil
@@ -99,6 +106,15 @@ func (s *Storage) DeleteTask(ctx context.Context, id uint64) error {
 	}
 	if commandTag.RowsAffected() == 0 {
 		return fmt.Errorf("%s: %w", op, storage.ErrTaskNotFound)
+	}
+	return nil
+}
+
+func checkTooLongField(op string, err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "22001" {
+		return fmt.Errorf(
+			"%s: %w", op, storage.ErrInputTooLong)
 	}
 	return nil
 }

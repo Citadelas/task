@@ -56,9 +56,6 @@ func New(
 	}
 }
 
-//TODO: better error handling
-//TODO: better interface naming and location
-
 func (t *Task) CreateTask(ctx context.Context, title, description string,
 	priority string) (*models.Task, error) {
 	const op = "task.CreateTask"

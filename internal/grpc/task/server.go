@@ -9,6 +9,7 @@ import (
 	"github.com/Citadelas/task/internal/grpc/validation"
 	"github.com/Citadelas/task/internal/grpc/validation/requests"
 	taskservice "github.com/Citadelas/task/internal/services/task"
+	"github.com/Citadelas/task/internal/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -58,8 +59,10 @@ func (s *serverAPI) CreateTask(
 	}
 	priority := req.GetPriority().String()
 	task, err := s.task.CreateTask(ctx, req.GetTitle(), req.GetDescription(), priority)
-	//TODO: add various errors handlers
 	if err != nil {
+		if errors.Is(err, storage.ErrInputTooLong) {
+			return nil, status.Error(codes.InvalidArgument, storage.ErrInputTooLong.Error())
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	res, err := s.adapter.ToProto(task)
@@ -78,7 +81,6 @@ func (s *serverAPI) GetTask(
 	}
 
 	task, err := s.task.GetTask(ctx, req.GetId())
-	//TODO: add various errors handlers
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
@@ -109,6 +111,9 @@ func (s *serverAPI) UpdateTask(
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
 		}
+		if errors.Is(err, storage.ErrInputTooLong) {
+			return nil, status.Error(codes.InvalidArgument, storage.ErrInputTooLong.Error())
+		}
 		return nil, status.Error(codes.Internal, "internal error")
 	}
 	res, err := s.adapter.ToProto(task)
@@ -129,7 +134,6 @@ func (s *serverAPI) DeleteTask(
 	}
 
 	err := s.task.DeleteTask(ctx, req.GetId())
-	//TODO: add various errors handlers
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
@@ -141,7 +145,6 @@ func (s *serverAPI) DeleteTask(
 
 func (s *serverAPI) UpdateStatus(
 	ctx context.Context, req *taskv1.UpdateStatusRequest) (*taskv1.UpdateStatusResponse, error) {
-	//TODO: fix bug with DONE status
 	validationReq := requests.UpdateStatusRequest{
 		ID:     req.GetId(),
 		Status: req.GetStatus().String(),
@@ -151,7 +154,6 @@ func (s *serverAPI) UpdateStatus(
 	}
 
 	task, err := s.task.UpdateStatus(ctx, req.GetId(), req.GetStatus().String())
-	//TODO: add various errors handlers
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
