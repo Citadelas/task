@@ -6,6 +6,8 @@ import (
 	taskv1 "github.com/Citadelas/protos/golang/task"
 	"github.com/Citadelas/task/internal/domain/models"
 	"github.com/Citadelas/task/internal/grpc/converter"
+	"github.com/Citadelas/task/internal/grpc/validation"
+	"github.com/Citadelas/task/internal/grpc/validation/requests"
 	taskservice "github.com/Citadelas/task/internal/services/task"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -44,18 +46,15 @@ func Register(gRPC *grpc.Server, task Task) {
 
 func (s *serverAPI) CreateTask(
 	ctx context.Context, req *taskv1.CreateTaskRequest) (*taskv1.CreateTaskResponse, error) {
-	if req.GetDescription() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "description is required")
+
+	validationReq := requests.CreateTaskRequest{
+		Title:       req.GetTitle(),
+		Description: req.GetDescription(),
+		Priority:    req.GetPriority().String(),
 	}
-	if req.GetTitle() == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "title is required")
-	}
-	if req.GetPriority() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "priority is required")
-	}
-	_, ok := taskv1.TaskPriority_value[req.GetPriority().String()]
-	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "incorrect priority")
+
+	if err := validation.ValidateStruct(validationReq); err != nil {
+		return nil, err
 	}
 	priority := req.GetPriority().String()
 	task, err := s.task.CreateTask(ctx, req.GetTitle(), req.GetDescription(), priority)
@@ -72,9 +71,12 @@ func (s *serverAPI) CreateTask(
 
 func (s *serverAPI) GetTask(
 	ctx context.Context, req *taskv1.GetTaskRequest) (*taskv1.GetTaskResponse, error) {
-	if req.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "id is required")
+
+	validationReq := requests.GetTaskRequest{ID: req.GetId()}
+	if err := validation.ValidateStruct(validationReq); err != nil {
+		return nil, err
 	}
+
 	task, err := s.task.GetTask(ctx, req.GetId())
 	//TODO: add various errors handlers
 	if err != nil {
@@ -92,9 +94,16 @@ func (s *serverAPI) GetTask(
 
 func (s *serverAPI) UpdateTask(
 	ctx context.Context, req *taskv1.UpdateTaskRequest) (*taskv1.UpdateTaskResponse, error) {
-	if req.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "id is required")
+	validationReq := requests.UpdateTaskRequest{
+		ID:          req.GetId(),
+		Title:       req.GetTitle(),
+		Description: req.GetDescription(),
+		Priority:    req.GetPriority().String(),
 	}
+	if err := validation.ValidateStruct(validationReq); err != nil {
+		return nil, err
+	}
+
 	task, err := s.task.UpdateTask(ctx, req.GetId(), req.GetTitle(), req.GetDescription(), req.GetPriority().String())
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
@@ -111,9 +120,14 @@ func (s *serverAPI) UpdateTask(
 
 func (s *serverAPI) DeleteTask(
 	ctx context.Context, req *taskv1.DeleteTaskRequest) (*emptypb.Empty, error) {
-	if req.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "id is required")
+
+	validationReq := requests.DeleteTaskRequest{
+		ID: req.GetId(),
 	}
+	if err := validation.ValidateStruct(validationReq); err != nil {
+		return nil, err
+	}
+
 	err := s.task.DeleteTask(ctx, req.GetId())
 	//TODO: add various errors handlers
 	if err != nil {
@@ -127,13 +141,15 @@ func (s *serverAPI) DeleteTask(
 
 func (s *serverAPI) UpdateStatus(
 	ctx context.Context, req *taskv1.UpdateStatusRequest) (*taskv1.UpdateStatusResponse, error) {
-	if req.GetId() == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "id is required")
+	//TODO: fix bug with DONE status
+	validationReq := requests.UpdateStatusRequest{
+		ID:     req.GetId(),
+		Status: req.GetStatus().String(),
 	}
-	_, ok := taskv1.TaskStatus_value[req.GetStatus().String()]
-	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "incorrect status")
+	if err := validation.ValidateStruct(validationReq); err != nil {
+		return nil, err
 	}
+
 	task, err := s.task.UpdateStatus(ctx, req.GetId(), req.GetStatus().String())
 	//TODO: add various errors handlers
 	if err != nil {
