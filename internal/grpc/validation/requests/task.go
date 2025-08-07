@@ -23,5 +23,5 @@ type DeleteTaskRequest struct {
 
 type UpdateStatusRequest struct {
 	ID     uint64 `validate:"required,gt=0"`
-	Status string `validate:"required,oneof=TODO IN_PROGRESS DONE"`
+	Status string `validate:"required,task_status"`
 }

@@ -1,6 +1,7 @@
 package validation
 
 import (
+	taskv1 "github.com/Citadelas/protos/golang/task"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -12,22 +13,17 @@ func registerCustomValidators(v *validator.Validate) {
 
 func validateTaskPriority(fl validator.FieldLevel) bool {
 	priority := fl.Field().String()
-	validPriorities := []string{"LOW", "MEDIUM", "HIGH"}
-	for _, valid := range validPriorities {
-		if priority == valid {
-			return true
-		}
-	}
-	return false
+	_, exists := taskv1.TaskPriority_value[priority]
+	return exists
 }
 
 func validateTaskStatus(fl validator.FieldLevel) bool {
 	status := fl.Field().String()
-	validStatuses := []string{"TODO", "IN_PROGRESS", "DONE"}
-	for _, valid := range validStatuses {
-		if status == valid {
-			return true
-		}
+
+	_, exists := taskv1.TaskStatus_value[status]
+	if status == "TASK_STATUS_UNSPECIFIED" || status == "0" {
+		return false
 	}
-	return false
+
+	return exists
 }
