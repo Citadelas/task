@@ -9,6 +9,12 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 
   db-migrate:
     image: migrate/migrate
@@ -16,7 +22,8 @@ services:
     volumes:
       - ./migrations:/migrations
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
 
   task-app:
     build: .
@@ -25,6 +32,7 @@ services:
     environment:
       - CONFIG_PATH=/app/config/local.yaml
     depends_on:
-      - db-migrate
+      db-migrate:
+        condition: service_completed_successfully
 volumes:
   pgdata:
