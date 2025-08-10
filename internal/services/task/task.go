@@ -23,21 +23,21 @@ var (
 )
 
 type TaskCreator interface {
-	CreateTask(ctx context.Context, title, description string,
+	CreateTask(ctx context.Context, uid uint64, title, description string,
 		priority string) (*models.Task, error)
 }
 
 type TaskGetter interface {
-	GetTask(ctx context.Context, id uint64) (*models.Task, error)
+	GetTask(ctx context.Context, id uint64, uid uint64) (*models.Task, error)
 }
 type TaskUpdater interface {
-	UpdateTask(ctx context.Context, id uint64, title, description string,
+	UpdateTask(ctx context.Context, id uint64, uid uint64, title, description string,
 		priority string) (*models.Task, error)
-	UpdateStatus(ctx context.Context, id uint64, status string) (*models.Task, error)
+	UpdateStatus(ctx context.Context, id uint64, uid uint64, status string) (*models.Task, error)
 }
 
 type TaskDeleter interface {
-	DeleteTask(ctx context.Context, id uint64) error
+	DeleteTask(ctx context.Context, id uint64, uid uint64) error
 }
 
 func New(
@@ -56,13 +56,13 @@ func New(
 	}
 }
 
-func (t *Task) CreateTask(ctx context.Context, title, description string,
+func (t *Task) CreateTask(ctx context.Context, uid uint64, title, description string,
 	priority string) (*models.Task, error) {
 	const op = "task.CreateTask"
 	log := t.logger.With(
 		slog.String("op", op),
 	)
-	res, err := t.creator.CreateTask(ctx, title, description, priority)
+	res, err := t.creator.CreateTask(ctx, uid, title, description, priority)
 	if err != nil {
 		log.Error("Failed to create task", sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", op, err)
@@ -70,12 +70,12 @@ func (t *Task) CreateTask(ctx context.Context, title, description string,
 	return res, nil
 }
 
-func (t *Task) GetTask(ctx context.Context, id uint64) (*models.Task, error) {
+func (t *Task) GetTask(ctx context.Context, id, uid uint64) (*models.Task, error) {
 	const op = "task.GetTask"
 	log := t.logger.With(
 		slog.String("op", op),
 	)
-	res, err := t.getter.GetTask(ctx, id)
+	res, err := t.getter.GetTask(ctx, id, uid)
 	if err != nil {
 		if errors.Is(err, storage.ErrTaskNotFound) {
 			log.Warn("task not found", sl.Err(err))
@@ -87,13 +87,13 @@ func (t *Task) GetTask(ctx context.Context, id uint64) (*models.Task, error) {
 	return res, nil
 }
 
-func (t *Task) UpdateTask(ctx context.Context, id uint64, title, description string,
+func (t *Task) UpdateTask(ctx context.Context, id, uid uint64, title, description string,
 	priority string) (*models.Task, error) {
 	const op = "task.UpdateTask"
 	log := t.logger.With(
 		slog.String("op", op),
 	)
-	res, err := t.updater.UpdateTask(ctx, id, title, description, priority)
+	res, err := t.updater.UpdateTask(ctx, id, uid, title, description, priority)
 	if err != nil {
 		if errors.Is(err, storage.ErrTaskNotFound) {
 			log.Warn("task not found", sl.Err(err))
@@ -105,12 +105,12 @@ func (t *Task) UpdateTask(ctx context.Context, id uint64, title, description str
 	return res, nil
 }
 
-func (t *Task) UpdateStatus(ctx context.Context, id uint64, status string) (*models.Task, error) {
+func (t *Task) UpdateStatus(ctx context.Context, id, uid uint64, status string) (*models.Task, error) {
 	const op = "task.UpdateTask"
 	log := t.logger.With(
 		slog.String("op", op),
 	)
-	res, err := t.updater.UpdateStatus(ctx, id, status)
+	res, err := t.updater.UpdateStatus(ctx, id, uid, status)
 	if err != nil {
 		if errors.Is(err, storage.ErrTaskNotFound) {
 			log.Warn("task not found", sl.Err(err))
@@ -122,12 +122,12 @@ func (t *Task) UpdateStatus(ctx context.Context, id uint64, status string) (*mod
 	return res, nil
 }
 
-func (t *Task) DeleteTask(ctx context.Context, id uint64) error {
+func (t *Task) DeleteTask(ctx context.Context, id, uid uint64) error {
 	const op = "task.UpdateTask"
 	log := t.logger.With(
 		slog.String("op", op),
 	)
-	err := t.deleter.DeleteTask(ctx, id)
+	err := t.deleter.DeleteTask(ctx, id, uid)
 	if err != nil {
 		if errors.Is(err, storage.ErrTaskNotFound) {
 			log.Warn("task not found", sl.Err(err))

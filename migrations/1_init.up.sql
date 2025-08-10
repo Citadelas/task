@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     priority VARCHAR(50),

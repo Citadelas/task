@@ -34,6 +34,7 @@ func (a *TaskAdapter) ToProto(domainTask *models.Task) (*taskv1.Task, error) {
 	}
 	return &taskv1.Task{
 		Id:          domainTask.Id,
+		UserId:      domainTask.UserId,
 		Title:       domainTask.Title,
 		Description: domainTask.Description,
 		Priority:    taskv1.TaskPriority(priorityVal),
@@ -46,6 +47,7 @@ func (a *TaskAdapter) ToProto(domainTask *models.Task) (*taskv1.Task, error) {
 func (a *TaskAdapter) ToDomain(protoTask *taskv1.Task) (*models.Task, error) {
 	return &models.Task{
 		Id:          protoTask.Id,
+		UserId:      protoTask.UserId,
 		Title:       protoTask.Title,
 		Description: protoTask.Description,
 		Status:      protoTask.String(),

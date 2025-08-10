@@ -17,15 +17,15 @@ import (
 )
 
 type Task interface {
-	CreateTask(ctx context.Context, title, description string,
+	CreateTask(ctx context.Context, uid uint64,
+		title, description, priority string) (*models.Task, error)
+
+	GetTask(ctx context.Context, id, uid uint64) (*models.Task, error)
+	UpdateTask(ctx context.Context, id, uid uint64, title, description string,
 		priority string) (*models.Task, error)
 
-	GetTask(ctx context.Context, id uint64) (*models.Task, error)
-	UpdateTask(ctx context.Context, id uint64, title, description string,
-		priority string) (*models.Task, error)
-
-	DeleteTask(ctx context.Context, id uint64) error
-	UpdateStatus(ctx context.Context, id uint64, status string) (*models.Task, error)
+	DeleteTask(ctx context.Context, id, uid uint64) error
+	UpdateStatus(ctx context.Context, id, uid uint64, status string) (*models.Task, error)
 }
 
 type serverAPI struct {
@@ -41,24 +41,19 @@ func Register(gRPC *grpc.Server, task Task) {
 	})
 }
 
-//TODO: implement validator
-//TODO: better enum validating
-//TODO: less code duplicating
-
 func (s *serverAPI) CreateTask(
 	ctx context.Context, req *taskv1.CreateTaskRequest) (*taskv1.CreateTaskResponse, error) {
-
 	validationReq := requests.CreateTaskRequest{
+		UID:         req.GetUserId(),
 		Title:       req.GetTitle(),
 		Description: req.GetDescription(),
 		Priority:    req.GetPriority().String(),
 	}
-
 	if err := validation.ValidateStruct(validationReq); err != nil {
 		return nil, err
 	}
 	priority := req.GetPriority().String()
-	task, err := s.task.CreateTask(ctx, req.GetTitle(), req.GetDescription(), priority)
+	task, err := s.task.CreateTask(ctx, req.GetUserId(), req.GetTitle(), req.GetDescription(), priority)
 	if err != nil {
 		if errors.Is(err, storage.ErrInputTooLong) {
 			return nil, status.Error(codes.InvalidArgument, storage.ErrInputTooLong.Error())
@@ -75,12 +70,12 @@ func (s *serverAPI) CreateTask(
 func (s *serverAPI) GetTask(
 	ctx context.Context, req *taskv1.GetTaskRequest) (*taskv1.GetTaskResponse, error) {
 
-	validationReq := requests.GetTaskRequest{ID: req.GetId()}
+	validationReq := requests.GetTaskRequest{ID: req.GetId(), UID: req.GetUserId()}
 	if err := validation.ValidateStruct(validationReq); err != nil {
 		return nil, err
 	}
 
-	task, err := s.task.GetTask(ctx, req.GetId())
+	task, err := s.task.GetTask(ctx, req.GetId(), req.GetUserId())
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
@@ -98,6 +93,7 @@ func (s *serverAPI) UpdateTask(
 	ctx context.Context, req *taskv1.UpdateTaskRequest) (*taskv1.UpdateTaskResponse, error) {
 	validationReq := requests.UpdateTaskRequest{
 		ID:          req.GetId(),
+		UID:         req.GetUserId(),
 		Title:       req.GetTitle(),
 		Description: req.GetDescription(),
 		Priority:    req.GetPriority().String(),
@@ -106,7 +102,7 @@ func (s *serverAPI) UpdateTask(
 		return nil, err
 	}
 
-	task, err := s.task.UpdateTask(ctx, req.GetId(), req.GetTitle(), req.GetDescription(), req.GetPriority().String())
+	task, err := s.task.UpdateTask(ctx, req.GetId(), req.GetUserId(), req.GetTitle(), req.GetDescription(), req.GetPriority().String())
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
@@ -127,13 +123,14 @@ func (s *serverAPI) DeleteTask(
 	ctx context.Context, req *taskv1.DeleteTaskRequest) (*emptypb.Empty, error) {
 
 	validationReq := requests.DeleteTaskRequest{
-		ID: req.GetId(),
+		ID:  req.GetId(),
+		UID: req.GetUserId(),
 	}
 	if err := validation.ValidateStruct(validationReq); err != nil {
 		return nil, err
 	}
 
-	err := s.task.DeleteTask(ctx, req.GetId())
+	err := s.task.DeleteTask(ctx, req.GetId(), req.GetUserId())
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")
@@ -148,12 +145,13 @@ func (s *serverAPI) UpdateStatus(
 	validationReq := requests.UpdateStatusRequest{
 		ID:     req.GetId(),
 		Status: req.GetStatus().String(),
+		UID:    req.GetUserId(),
 	}
 	if err := validation.ValidateStruct(validationReq); err != nil {
 		return nil, err
 	}
 
-	task, err := s.task.UpdateStatus(ctx, req.GetId(), req.GetStatus().String())
+	task, err := s.task.UpdateStatus(ctx, req.GetId(), req.GetUserId(), req.GetStatus().String())
 	if err != nil {
 		if errors.Is(err, taskservice.ErrWrongId) {
 			return nil, status.Error(codes.InvalidArgument, "task not found")

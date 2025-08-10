@@ -6,6 +6,7 @@ import (
 
 type Task struct {
 	Id          uint64
+	UserId      uint64
 	Title       string
 	Description string
 	Priority    string
