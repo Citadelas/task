@@ -6,9 +6,10 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: task
     ports:
-      - "5432:5432"
+      - "5433:5433"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    command: -p 5433
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
@@ -18,7 +19,7 @@ services:
 
   db-migrate:
     image: migrate/migrate
-    command: -path=/migrations -database postgres://postgres:postgres@postgres-db:5432/task?sslmode=disable up
+    command: -path=/migrations -database postgres://postgres:postgres@postgres-db:5433/task?sslmode=disable up
     volumes:
       - ./migrations:/migrations
     depends_on:
@@ -28,7 +29,7 @@ services:
   task-app:
     build: .
     ports:
-      - "44044:44044"
+      - "44045:44045"
     environment:
       - CONFIG_PATH=/app/config/local.yaml
     depends_on:
