@@ -1,5 +1,5 @@
 services:
-  postgres-db:
+  postgres:  # This is your service name
     image: postgres:latest
     environment:
       POSTGRES_USER: postgres
@@ -10,21 +10,24 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     command: -p 5433
+    networks:
+      - my-proxy-net  # Add this network
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -p 5433" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
-
-  db-migrate:
-    image: migrate/migrate
-    command: -path=/migrations -database postgres://postgres:postgres@postgres-db:5433/task?sslmode=disable up
-    volumes:
-      - ./migrations:/migrations
-    depends_on:
-      postgres-db:
-        condition: service_healthy
+#  db-migrate:
+#    image: migrate/migrate
+#    command: -path=/migrations -database postgres://postgres:postgres@postgres:5433/task?sslmode=disable
+#    volumes:
+#      - ./migrations:/migrations
+#    depends_on:
+#      postgres:  # Reference the correct service name
+#        condition: service_healthy
+#    networks:
+#      - my-proxy-net
 
   task-app:
     build: .
@@ -32,8 +35,17 @@ services:
       - "44045:44045"
     environment:
       - CONFIG_PATH=/app/config/local.yaml
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
+#    depends_on:
+#      db-migrate:
+#        condition: service_completed_successfully
+    networks:
+      - my-proxy-net
+
+networks:
+  my-proxy-net:
+    name: custom_network
+    external: true
+
+
 volumes:
   pgdata:
